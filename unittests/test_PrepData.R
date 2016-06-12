@@ -61,15 +61,10 @@ iter <- 0
 for (day in res2) {
       sumDay <- sum(day$steps, na.rm = TRUE);
       totalTimeEachDay <- append(totalTimeEachDay, sumDay)
-      ##newR <- c(as.character(day$date[1]), as.numeric(sumDay))
       iter <- iter + 1
       df_DailySteps$date[iter] <- as.character(day$date[1])
       df_DailySteps$steps[iter] <- as.numeric(sumDay)
-
-      ##print(paste0("sumDay = ", sumDay))
 }
-
-##df_DailySteps <- as.data.frame(totalTimeEachDay)
 
 days <- seq(df_DailySteps$date)
 head(df_DailySteps)
@@ -79,14 +74,12 @@ medianTotalDailySteps <- median(as.numeric(df_DailySteps$steps), na.rm = TRUE)
 
 require("ggplot2")
 
-##qplot(df_DailySteps$date, geom = "histogram", binwidth = 0.5, xlab = "Day", col = I("red"), main = "Histogram")
 p <- ggplot(data = df_DailySteps, aes(x = date))
 p <- p + geom_bar(aes(y = steps), stat = "identity", alpha = 1, width = 0.6, position = position_dodge(width = 1.9))
 p <- p + theme(axis.text.x = element_text(angle = 90))
 p <- p + xlab("Dates") + ylab("Total Steps") + ggtitle("Daily Total Steps")
 
 print(p)
-##ggplot(df_DailySteps, aes(as.numeric(df_DailySteps$date), df_DailySteps$steps)) + geom_histogram()
 
 factIntvlData <- split(res, res$interval)
 df_IntvlSteps <- data.frame(interval = integer(length(factIntvlData)), steps = integer(length(factIntvlData)), stringsAsFactors = FALSE)
@@ -121,7 +114,69 @@ clockTimeAtIntvl <- paste0(perWithMaxSteps %/% 60, ":", round((perWithMaxSteps %
 ##plot(range(df_IntvlSteps$interval), range(df_IntvlSteps$steps), type = "n", xlab = "Interval", ylab = "Total Steps")
 ##lines(df_IntvlSteps$interval, df_IntvlSteps$steps, type = "b", lwd = "1")
 
-View(df_IntvlSteps)
+#View(df_IntvlSteps)
+
+
+
+## Indentify NA fields
+na_steps <- which(is.na(res$steps))
+na_date <- which(is.na(res$date))
+na_interval <- which(is.na(res$interval))
+
+totNARows <- union(union(na_steps, na_date), na_interval)
+
+
+require("mice")
+
+pp <- md.pattern(res)
+imputed <- mice(res)
+
+completeImputed <- complete(imputed)
+
+factoredData <- split(completeImputed, completeImputed$date)
+df_DailySteps <- data.frame(date = character(length(factoredData)),
+                            steps = integer(length(factoredData)),
+                            stringsAsFactors = FALSE)
+iter <- 0
+for (day in factoredData) {
+      dayssum <- sum(day$steps, na.rm = TRUE);
+      iter <- iter + 1
+      df_DailySteps$date[iter] <- as.character(day$date[1])
+      df_DailySteps$steps[iter] <- as.numeric(dayssum)
+}
+
+require("timeDate")
+completeImputed$isWeekend <- ifelse(!isWeekday(timeDate(completeImputed$date)), "Weekend", "Weekday")
+
+require("lattice")
+require("latticeExtra")
+##factIntvlData <- split(completeImputed, completeImputed$interval)
+factIntvlData <- split(completeImputed, completeImputed$interval)
+df_AvgIntvlSteps <- data.frame(interval = integer(2 * length(factIntvlData)), steps = integer(2 * length(factIntvlData)), isWeekend = character(2 * length(factIntvlData)), stringsAsFactors = FALSE)
+
+head(factIntvlData)
+iter <- 0
+for (intvl in factIntvlData) {
+      ## get weekdays average
+      avgIntvl <- mean(intvl$steps[intvl$isWeekend == 'Weekday'])
+      iter <- iter + 1
+      df_AvgIntvlSteps$interval[iter] <- as.numeric(intvl$interval[1])
+      df_AvgIntvlSteps$steps[iter] <- as.numeric(avgIntvl)
+      df_AvgIntvlSteps$isWeekend[iter] <- as.character('Weekday')
+
+      ## weekend average
+      avgIntvl <- mean(intvl$steps[intvl$isWeekend == 'Weekend'])
+      iter <- iter + 1
+      df_AvgIntvlSteps$interval[iter] <- as.numeric(intvl$interval[1])
+      df_AvgIntvlSteps$steps[iter] <- as.numeric(avgIntvl)
+      df_AvgIntvlSteps$isWeekend[iter] <- as.character('Weekend')
+}
+
+p <- xyplot(df_AvgIntvlSteps$steps ~ df_AvgIntvlSteps$interval | df_AvgIntvlSteps$isWeekend, type = 'b', layout = c(1, 2), xlab = "Interval", ylab = "Steps", main = "Average Steps by Interval", pch = -1)
+print(p)
+
+##v <- timeDate(completeImputed$date)
+##View(v)
 ####
 ## cleanup.
 ## TODO Need to restore the workspace

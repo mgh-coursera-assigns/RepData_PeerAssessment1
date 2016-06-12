@@ -14,7 +14,9 @@ require("ggplot2")
 ```
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(cache = TRUE)
+clean_cache(clean = FALSE, path = opts_chunk$get("cache.path"))
+
+knitr::opts_chunk$set(cache = FALSE)
 ```
 ## Loading and preprocessing the data
 
@@ -69,9 +71,7 @@ dataset$date <- factor(dataset$date)
 
 ## What is mean total number of steps taken per day?
 ```{r meanSteps, echo=FALSE, results = FALSE} 
-
 factoredData <- split(dataset, dataset$date)
-
 df_DailySteps <- data.frame(date = character(length(factoredData)), 
                             steps = integer(length(factoredData)), 
                             stringsAsFactors = FALSE)
@@ -82,13 +82,11 @@ for (day in factoredData) {
       df_DailySteps$date[iter] <- as.character(day$date[1])
       df_DailySteps$steps[iter] <- as.numeric(dayssum)
 }
-
 ```
 
 ```{r meanAndMedianTotalSteps, echo = FALSE, results = FALSE}
-options(scipen = 6)
+options(scipen = 7)
 meanTotalDailySteps <- mean(as.numeric(df_DailySteps$steps), na.rm = TRUE)
-
 medianTotalDailySteps <- median(as.numeric(df_DailySteps$steps), na.rm = TRUE)
 ```
 
@@ -99,8 +97,6 @@ Median of total number of daily steps: `r medianTotalDailySteps`
 ##Total number of steps taken each day 
 ```{r tblTotalDailySteps, echo = FALSE, results = FALSE}
 require("ggplot2")
-
-##qplot(df_DailySteps$date, geom = "histogram", binwidth = 0.5, xlab = "Day", col = I("red"), main = "Histogram")
 p <- ggplot(data = df_DailySteps, aes(x = date))
 p <- p + geom_bar(aes(y = steps), stat = "identity", alpha = 1, width = 0.6, position = position_dodge(width = 1.9))
 p <- p + theme(axis.text.x = element_text(angle = 90))
@@ -116,16 +112,12 @@ df_IntvlSteps <- data.frame(interval = integer(length(factIntvlData)), steps = i
 iter <- 0
 for (intvl in factIntvlData) {
       avgIntvl <- mean(intvl$steps, na.rm = TRUE);
-      ##totalTimeEachDay <- append(totalTimeEachDay, sumDay)
-      ##newR <- c(as.character(day$date[1]), as.numeric(sumDay))
       iter <- iter + 1
       df_IntvlSteps$interval[iter] <- as.numeric(intvl$interval[1])
       df_IntvlSteps$steps[iter] <- as.numeric(avgIntvl)
-
-      ##print(paste0("sumDay = ", sumDay))
 }
 
-plot(seq(1, length(df_IntvlSteps$interval)), df_IntvlSteps$steps, type="l", main="Average Steps by Interval", xlab = "Interval", ylab = "Avg. Steps", xaxt='n')
+plot(seq(1, length(df_IntvlSteps$interval)), df_IntvlSteps$steps, type="l", main="Average Steps by Interval", xlab = "Interval", ylab = "Avg. Steps", xaxt = 'n')
 seqXTicks <- seq(0, length(df_IntvlSteps$interval), by = 4)
 axis(side = 1, at = seqXTicks)
 intvlWithMaxSteps <- df_IntvlSteps[which.max(df_IntvlSteps$steps), ]$interval
@@ -137,6 +129,84 @@ clockTimeAtIntvl <- paste0(intvlWithMaxSteps %/% 60, ":", intvlWithMaxSteps %% 6
 Interval # `r intvlWithMaxSteps`, viz. `r clockTimeAtIntvl`, has the highest average steps taken among the intervals measured, with an average of `r round(maxAvgStepsInIntvl, 3)` steps.
 
 ## Imputing missing values
+Check the missing data pattern. The 1/0 flags indicate if the columns have complete or missing values.
+```{r mdPattern, echo = FALSE, results = FALSE}
+## Identify NA fields 
+na_steps <- which(is.na(dataset$steps))
+na_date <- which(is.na(dataset$date))
+na_interval <- which(is.na(dataset$interval))
 
+totNARows <- union(union(na_steps, na_date), na_interval)
+
+require("mice")
+as.data.frame(md.pattern(dataset))
+```
+This shows that only the steps column has missing values. Imputing the data set using mice() with default values, except setting printFlag to FALSE.
+```{r imputingValues, echo = FALSE, results = FALSE}
+require("mice")
+imputed <- mice(dataset, printFlag = FALSE)
+impCompleted <- complete(imputed)
+
+factoredData <- split(impCompleted, impCompleted$date)
+df_DailySteps <- data.frame(date = character(length(factoredData)), 
+                            steps = integer(length(factoredData)), 
+                            stringsAsFactors = FALSE)
+iter <- 0
+for (day in factoredData) {
+      dayssum <- sum(day$steps, na.rm = TRUE);
+      iter <- iter + 1
+      df_DailySteps$date[iter] <- as.character(day$date[1])
+      df_DailySteps$steps[iter] <- as.numeric(dayssum)
+}
+
+options(scipen = 7)
+meanTotalDailySteps <- mean(as.numeric(df_DailySteps$steps))
+medianTotalDailySteps <- median(as.numeric(df_DailySteps$steps))
+```
+
+```{r tblTotalDailyStepsImputed, echo = FALSE, results = FALSE}
+require("ggplot2")
+p <- ggplot(data = df_DailySteps, aes(x = date))
+p <- p + geom_bar(aes(y = steps), stat = "identity", alpha = 1, width = 0.6, position = position_dodge(width = 1.9))
+p <- p + theme(axis.text.x = element_text(angle = 90))
+p <- p + xlab("Dates") + ylab("Total Steps") + ggtitle("Daily Total Steps in imputed data")
+print(p)
+```
+
+Mean of total number of daily steps in imputed data: `r round(meanTotalDailySteps, 3)`
+
+Median of total number of daily steps in imputed data: `r medianTotalDailySteps`
+
+The median has not changed, while the mean has increased reflecting the imputing of non-zero values for days which had no values in the original data set.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r categWeekday} 
+require("timeDate")
+impCompleted$isWeekend <- ifelse(!isWeekday(timeDate(impCompleted$date)), "Weekend", "Weekday")
+
+require("lattice")
+require("latticeExtra")
+factIntvlData <- split(impCompleted, impCompleted$interval)
+df_AvgIntvlSteps <- data.frame(interval = integer(2 * length(factIntvlData)), steps = integer(2 * length(factIntvlData)), isWeekend = character(2 * length(factIntvlData)), stringsAsFactors = FALSE)
+
+iter <- 0
+for (intvl in factIntvlData) {
+      ## get weekdays average
+      avgIntvl <- mean(intvl$steps[intvl$isWeekend == 'Weekday'])
+      iter <- iter + 1
+      df_AvgIntvlSteps$interval[iter] <- as.numeric(intvl$interval[1])
+      df_AvgIntvlSteps$steps[iter] <- as.numeric(avgIntvl)
+      df_AvgIntvlSteps$isWeekend[iter] <- as.character('Weekday')
+
+      ## weekend average
+      avgIntvl <- mean(intvl$steps[intvl$isWeekend == 'Weekend'])
+      iter <- iter + 1
+      df_AvgIntvlSteps$interval[iter] <- as.numeric(intvl$interval[1])
+      df_AvgIntvlSteps$steps[iter] <- as.numeric(avgIntvl)
+      df_AvgIntvlSteps$isWeekend[iter] <- as.character('Weekend')
+}
+
+xyplot(df_AvgIntvlSteps$steps ~ seq(1, length(df_AvgIntvlSteps$interval) / 2) | df_AvgIntvlSteps$isWeekend, type = 'b', layout = c(1, 2), xlab = "Interval", ylab = "Steps", main = "Comparison of Average Steps by Interval by Weekend and Weekday", pch = -1)
+```
+
+These plots of steps taken across intervals seem to indicate that the user reaches peak activity around 4 pm, both on weekdays and weekends, and is somewhat more active on weekend evenings than on weekday evenings.
