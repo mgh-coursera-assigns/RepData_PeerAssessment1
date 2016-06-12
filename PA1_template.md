@@ -1,27 +1,40 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+# Reproducible Research: Peer Assessment 1
 
 
 
-```{r dependencies}
+
+```r
 require("stringr")
+```
+
+```
+## Loading required package: stringr
+```
+
+```r
 require("knitr")
+```
+
+```
+## Loading required package: knitr
+```
+
+```r
 require("ggplot2")
 ```
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(cache = TRUE)
 ```
+## Loading required package: ggplot2
+```
+
+
 ## Loading and preprocessing the data
 
 Loading data from the file into a data frame, stopping the script
 if data frame could not be created.
 
-```{r loaddata}
+
+```r
 ##
 ##  Loads into a dataframe from a CSV file.
 ##    If specified by 'unzip', the function assumes 'localFile' is a 
@@ -68,43 +81,15 @@ dataset$date <- factor(dataset$date)
 ```
 
 ## What is mean total number of steps taken per day?
-```{r meanSteps, echo=FALSE} 
 
-factoredData <- split(dataset, dataset$date)
 
-df_DailySteps <- data.frame(date = character(length(factoredData)), 
-                            steps = integer(length(factoredData)), 
-                            stringsAsFactors = FALSE)
-iter <- 0
-for (day in factoredData) {
-      dayssum <- sum(day$steps, na.rm = TRUE);
-      iter <- iter + 1
-      df_DailySteps$date[iter] <- as.character(day$date[1])
-      df_DailySteps$steps[iter] <- as.numeric(dayssum)
-}
 
-```
 
-```{r meanAndMedianTotalSteps, echo = FALSE, results = FALSE}
-options(scipen = 6)
-meanTotalDailySteps <- mean(as.numeric(df_DailySteps$steps), na.rm = TRUE)
-medianTotalDailySteps <- median(as.numeric(df_DailySteps$steps), na.rm = TRUE)
-```
-
-Mean of total number of daily steps: `r round(meanTotalDailySteps, 3)`
-Median of total number of daily steps: `r medianTotalDailySteps`
+Mean of total number of daily steps: 9354.23
+Median of total number of daily steps: 10395
 
 ##Total number of steps taken each day 
-```{r tblTotalDailySteps, echo = FALSE, results = FALSE}
-require("ggplot2")
-
-##qplot(df_DailySteps$date, geom = "histogram", binwidth = 0.5, xlab = "Day", col = I("red"), main = "Histogram")
-p <- ggplot(data = df_DailySteps, aes(x = date))
-p <- p + geom_bar(aes(y = steps), stat = "identity", alpha = 1, width = 0.6, position = position_dodge(width = 1.9))
-p <- p + theme(axis.text.x = element_text(angle = 90))
-p <- p + xlab("Dates") + ylab("Total Steps") + ggtitle("Daily Total Steps")
-print(p)
-```
+![](PA1_template_files/figure-html/tblTotalDailySteps-1.png)<!-- -->
 
 
 
