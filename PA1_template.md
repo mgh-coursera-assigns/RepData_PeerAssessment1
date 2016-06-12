@@ -86,19 +86,19 @@ dataset$date <- factor(dataset$date)
 
 
 Mean of total number of daily steps: 9354.23
-Median of total number of daily steps: 10395
+
+Median of total number of daily steps: 1.0395\times 10^{4}
 
 ##Total number of steps taken each day 
 ![](PA1_template_files/figure-html/tblTotalDailySteps-1.png)<!-- -->
 
-
-
 ## What is the average daily activity pattern?
+![](PA1_template_files/figure-html/avgDailyPattern-1.png)<!-- -->
 
 
+Interval # 835, viz. 13:55 hours, has the highest average steps taken among the intervals measured, with an average of 206.17 steps.
 
 ## Imputing missing values
-
 
 
 ## Are there differences in activity patterns between weekdays and weekends?

@@ -68,7 +68,7 @@ dataset$date <- factor(dataset$date)
 ```
 
 ## What is mean total number of steps taken per day?
-```{r meanSteps, echo=FALSE} 
+```{r meanSteps, echo=FALSE, results = FALSE} 
 
 factoredData <- split(dataset, dataset$date)
 
@@ -88,10 +88,12 @@ for (day in factoredData) {
 ```{r meanAndMedianTotalSteps, echo = FALSE, results = FALSE}
 options(scipen = 6)
 meanTotalDailySteps <- mean(as.numeric(df_DailySteps$steps), na.rm = TRUE)
+
 medianTotalDailySteps <- median(as.numeric(df_DailySteps$steps), na.rm = TRUE)
 ```
 
 Mean of total number of daily steps: `r round(meanTotalDailySteps, 3)`
+
 Median of total number of daily steps: `r medianTotalDailySteps`
 
 ##Total number of steps taken each day 
@@ -106,14 +108,35 @@ p <- p + xlab("Dates") + ylab("Total Steps") + ggtitle("Daily Total Steps")
 print(p)
 ```
 
-
-
 ## What is the average daily activity pattern?
+```{r avgDailyPattern, echo = FALSE}
+factIntvlData <- split(dataset, dataset$interval)
+df_IntvlSteps <- data.frame(interval = integer(length(factIntvlData)), steps = integer(length(factIntvlData)), stringsAsFactors = FALSE)
+
+iter <- 0
+for (intvl in factIntvlData) {
+      avgIntvl <- mean(intvl$steps, na.rm = TRUE);
+      ##totalTimeEachDay <- append(totalTimeEachDay, sumDay)
+      ##newR <- c(as.character(day$date[1]), as.numeric(sumDay))
+      iter <- iter + 1
+      df_IntvlSteps$interval[iter] <- as.numeric(intvl$interval[1])
+      df_IntvlSteps$steps[iter] <- as.numeric(avgIntvl)
+
+      ##print(paste0("sumDay = ", sumDay))
+}
+
+plot(seq(1, length(df_IntvlSteps$interval)), df_IntvlSteps$steps, type="l", main="Average Steps by Interval", xlab = "Interval", ylab = "Avg. Steps", xaxt='n')
+seqXTicks <- seq(0, length(df_IntvlSteps$interval), by = 4)
+axis(side = 1, at = seqXTicks)
+intvlWithMaxSteps <- df_IntvlSteps[which.max(df_IntvlSteps$steps), ]$interval
+maxAvgStepsInIntvl <- max(df_IntvlSteps$steps)
+clockTimeAtIntvl <- paste0(intvlWithMaxSteps %/% 60, ":", intvlWithMaxSteps %% 60, " hours")
+```
 
 
+Interval # `r intvlWithMaxSteps`, viz. `r clockTimeAtIntvl`, has the highest average steps taken among the intervals measured, with an average of `r round(maxAvgStepsInIntvl, 3)` steps.
 
 ## Imputing missing values
-
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
